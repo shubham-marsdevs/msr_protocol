@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MSR Data Visualization</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <h1>Real-Time MSR Data</h1>
+    <canvas id="myChart" width="400" height="200"></canvas>
+
+    <script>
+        websocket_route = 'ws://' + window.location.host + '/ws/msr_data/';
+        console.log(websocket_route);
+        // Check if the browser supports WebSocket
+        if (!window.WebSocket) {
+            alert("Your browser does not support WebSocket. Please use a modern browser.");
+        }
+        // Create a WebSocket connection
+        var socket = new WebSocket(websocket_route);
+        // var socket = new WebSocket('ws://' + window.location.host + '/ws/msr_data/');
+
+        socket.onmessage = function(e) {
+            const data = JSON.parse(e.data).data;
+            updateChart(data);  // Update the chart with the new data
+        };
+
+        function updateChart(data) {
+            // Create or update the chart
+            var ctx = document.getElementById('myChart').getContext('2d');
+            if (window.myChart) {
+                window.myChart.data.labels.push(new Date().toLocaleTimeString());  // Add new timestamp
+                window.myChart.data.datasets[0].data.push(data);  // Add new data point
+                window.myChart.update();  // Update the chart
+            } else {
+                window.myChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: [new Date().toLocaleTimeString()],  // Initial label (timestamp)
+                        datasets: [{
+                            label: 'MSR Data',
+                            data: [data],  // Initial data point
+                            borderColor: 'rgb(75, 192, 192)',
+                            fill: false
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            x: {
+                                type: 'time',
+                                time: {
+                                    unit: 'minute'
+                                }
+                            }
+                        }
+                    }});
+            }
+        }
+    </script>
+</body>
+</html>
