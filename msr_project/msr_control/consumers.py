@@ -1,8 +1,24 @@
+"""
+WebSocket consumers for the MSR Control application.
+
+This module handles WebSocket connections for real-time data streaming
+and bidirectional communication with the frontend.
+"""
 import json
 import asyncio
+import traceback
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
 from django.contrib.auth.models import AnonymousUser
+from django.conf import settings
+
+# Try to import the logger, but don't fail if it's not available yet
+try:
+    from .utils.logger import get_logger
+    logger = get_logger()
+except ImportError:
+    import logging
+    logger = logging.getLogger(__name__)
 
 class MSRConsumer(AsyncWebsocketConsumer):
     async def connect(self):
