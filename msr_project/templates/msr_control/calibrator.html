@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MSR Control - Calibrator View</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        .header {
+            background-color: #333;
+            color: white;
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+        .user-info {
+            display: flex;
+            align-items: center;
+        }
+        .user-role {
+            background-color: #2196F3;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 3px;
+            margin-right: 15px;
+        }
+        .logout-btn {
+            background-color: #f44336;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 3px;
+            cursor: pointer;
+            text-decoration: none;
+        }
+        .content {
+            padding: 20px;
+        }
+        .chart-container {
+            margin-top: 20px;
+            height: 300px;
+        }
+        .controls {
+            margin-top: 30px;
+            padding: 20px;
+            background-color: #f5f5f5;
+            border-radius: 5px;
+        }
+        .control-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="number"] {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button {
+            background-color: #2196F3;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0b7dda;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>MSR Data Calibration</h1>
+        <div class="user-info">
+            <div class="user-role">Calibrator</div>
+            <a href="{% url 'logout' %}" class="logout-btn">Logout</a>
+        </div>
+    </div>
+    
+    <div class="content">
+        <h2>Real-Time MSR Data with Calibration</h2>
+        <p>Welcome to the Calibrator view. Here you can monitor and calibrate MSR data.</p>
+        
+        <div class="chart-container">
+            <canvas id="myChart"></canvas>
+        </div>
+        
+        <div class="controls">
+            <h3>Calibration Controls</h3>
+            <div class="control-group">
+                <label for="offset">Offset Adjustment</label>
+                <input type="number" id="offset" step="0.1" value="0">
+            </div>
+            <div class="control-group">
+                <label for="gain">Gain Adjustment</label>
+                <input type="number" id="gain" step="0.01" value="1.0">
+            </div>
+            <div class="control-group">
+                <label for="filter">Filter Strength</label>
+                <input type="number" id="filter" step="0.1" min="0" max="1" value="0.5">
+            </div>
+            <button id="calibrate-btn">Apply Calibration</button>
+            <button id="reset-btn">Reset to Defaults</button>
+        </div>
+    </div>
+
+    <script>
+        websocket_route = 'ws://' + window.location.host + '/ws/msr_data/';
+        console.log(websocket_route);
+        
+        // Check if the browser supports WebSocket
+        if (!window.WebSocket) {
+            alert("Your browser does not support WebSocket. Please use a modern browser.");
+        }
+        
+        // Create a WebSocket connection
+        var socket = new WebSocket(websocket_route);
+
+        socket.onmessage = function(e) {
+            const response = JSON.parse(e.data);
+            
+            if (response.error) {
+                alert(response.error);
+                return;
+            }
+            
+            const data = response.data;
+            updateChart(data);  // Update the chart with the new data
+        };
+        
+        // Calibration controls
+        document.getElementById('calibrate-btn').addEventListener('click', function() {
+            const offset = parseFloat(document.getElementById('offset').value);
+            const gain = parseFloat(document.getElementById('gain').value);
+            const filter = parseFloat(document.getElementById('filter').value);
+            
+            // Send calibration data to server
+            socket.send(JSON.stringify({
+                action: 'calibrate',
+                parameters: {
+                    offset: offset,
+                    gain: gain,
+                    filter: filter
+                }
+            }));
+        });
+        
+        document.getElementById('reset-btn').addEventListener('click', function() {
+            document.getElementById('offset').value = 0;
+            document.getElementById('gain').value = 1.0;
+            document.getElementById('filter').value = 0.5;
+            
+            // Send reset command to server
+            socket.send(JSON.stringify({
+                action: 'calibrate',
+                parameters: {
+                    offset: 0,
+                    gain: 1.0,
+                    filter: 0.5
+                }
+            }));
+        });
+
+        function updateChart(data) {
+            // Create or update the chart
+            var ctx = document.getElementById('myChart').getContext('2d');
+            if (window.myChart) {
+                window.myChart.data.labels.push(new Date().toLocaleTimeString());  // Add new timestamp
+                window.myChart.data.datasets[0].data.push(data);  // Add new data point
+                window.myChart.update();  // Update the chart
+            } else {
+                window.myChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: [new Date().toLocaleTimeString()],  // Initial label (timestamp)
+                        datasets: [{
+                            label: 'MSR Data',
+                            data: [data],  // Initial data point
+                            borderColor: 'rgb(75, 192, 192)',
+                            fill: false
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            x: {
+                                type: 'time',
+                                time: {
+                                    unit: 'minute'
+                                }
+                            }
+                        }
+                    }});
+            }
+        }
+    </script>
+</body>
+</html>

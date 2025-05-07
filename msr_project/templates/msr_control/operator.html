@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MSR Control - Operator View</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        .header {
+            background-color: #333;
+            color: white;
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+        .user-info {
+            display: flex;
+            align-items: center;
+        }
+        .user-role {
+            background-color: #4CAF50;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 3px;
+            margin-right: 15px;
+        }
+        .logout-btn {
+            background-color: #f44336;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 3px;
+            cursor: pointer;
+            text-decoration: none;
+        }
+        .content {
+            padding: 20px;
+        }
+        .chart-container {
+            margin-top: 20px;
+            height: 400px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>MSR Data Monitoring</h1>
+        <div class="user-info">
+            <div class="user-role">Operator</div>
+            <a href="{% url 'logout' %}" class="logout-btn">Logout</a>
+        </div>
+    </div>
+    
+    <div class="content">
+        <h2>Real-Time MSR Data</h2>
+        <p>Welcome to the Operator view. Here you can monitor real-time MSR data.</p>
+        
+        <div class="chart-container">
+            <canvas id="myChart"></canvas>
+        </div>
+    </div>
+
+    <script>
+        websocket_route = 'ws://' + window.location.host + '/ws/msr_data/';
+        console.log(websocket_route);
+        
+        // Check if the browser supports WebSocket
+        if (!window.WebSocket) {
+            alert("Your browser does not support WebSocket. Please use a modern browser.");
+        }
+        
+        // Create a WebSocket connection
+        var socket = new WebSocket(websocket_route);
+
+        socket.onmessage = function(e) {
+            const data = JSON.parse(e.data).data;
+            updateChart(data);  // Update the chart with the new data
+        };
+
+        function updateChart(data) {
+            // Create or update the chart
+            var ctx = document.getElementById('myChart').getContext('2d');
+            if (window.myChart) {
+                window.myChart.data.labels.push(new Date().toLocaleTimeString());  // Add new timestamp
+                window.myChart.data.datasets[0].data.push(data);  // Add new data point
+                window.myChart.update();  // Update the chart
+            } else {
+                window.myChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: [new Date().toLocaleTimeString()],  // Initial label (timestamp)
+                        datasets: [{
+                            label: 'MSR Data',
+                            data: [data],  // Initial data point
+                            borderColor: 'rgb(75, 192, 192)',
+                            fill: false
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            x: {
+                                type: 'time',
+                                time: {
+                                    unit: 'minute'
+                                }
+                            }
+                        }
+                    }});
+            }
+        }
+    </script>
+</body>
+</html>
