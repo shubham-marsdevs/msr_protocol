@@ -149,15 +149,3 @@ docker run -p 2345:2345 etherlab
 1. Implement new data processing in `msr_protocol.py`
 2. Update the WebSocket consumer in `consumers.py` if needed
 3. Modify the dashboard template for new visualizations
-
-### Testing
-Run the Django test suite:
-```
-python manage.py test
-```
-
-## License
-[Specify your license here]
-
-## Contributors
-[Your name/organization]
